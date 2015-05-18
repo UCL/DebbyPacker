@@ -7,10 +7,12 @@ immutable type GitSource <: AbstractSource
 end
 GitSource(u::String, v::VersionNumber) = GitSource(u, "v$v")
 
-function prep_source(package::AbstractPackage, gitter::GitSource, workdir::String;
+function prepare_source(package::AbstractPackage, gitter::GitSource, workdir::String;
     from_scratch=false, kwargs...)
+  const name = package_name(package)
   const build = builddir(package, workdir)
   const source = sourcedir(package, workdir)
+  const tar = tarfile(package, workdir)
   if from_scratch && isdir(build)
     rm(build; recursive=true)
   end
@@ -18,17 +20,17 @@ function prep_source(package::AbstractPackage, gitter::GitSource, workdir::Strin
 
   isdir(joinpath(source, ".git")) || run(`git clone $(gitter.url) $source`)
 
-  cd(sourcedir) do
-    if length(gitter.version)
-      run(`git checkout $(gitter.version)`)
+  cd(source) do
+    if length(gitter.commit) > 0
+      run(`git checkout $(gitter.commit)`)
     end
   end
 
-  cd(joinpath(builddir, "source")) do
-    run(`tar -czvf $tarfile --exclude .git* $name`)
+  cd(dirname(source)) do
+    run(`tar -czvf $tar --exclude .git* $name`)
   end
-  cd(builddir) do
-    run(`tar -xvf $tarfile`)
+  cd(build) do
+    run(`tar -xvf $tar`)
   end
 end
 

@@ -23,13 +23,13 @@ type Package <: AbstractPackage
             license::String="MIT", version::VersionNumber=v"0.0.0", homepage::String="",
             maintainer::String="", build_depends::Vector{String}=String[],
             depends::Vector{String}=String[])
-        new(name, license, version, url, maintainer, build_depends, depends, source)
+        new(name, license, version, homepage, maintainer, build_depends, depends, source)
     end
 end
 
 
-function prep_source(pack::AbstractPackage, workdir::String="workspace"; kwargs...)
-  prep_source(pack, pack.source, workdir; kwargs...)
+function prepare_source(pack::AbstractPackage, workdir::String="workspace"; kwargs...)
+  prepare_source(pack, pack.source, workdir; kwargs...)
 end
 
 include("convenience.jl")

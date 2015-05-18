@@ -1,5 +1,12 @@
+module DebbyPackerTests
 using DebbyPacker
-using Base.Test
+using FactCheck: facts, context, @fact, greater_than, not, @fact_throws, anyof, anything
 
-# write your own tests here
-@test 1 == 1
+import Base: ismatch
+ismatch(regex::String) = x -> ismatch(Regex(regex), x)
+ismatch(regex::Regex) = x -> ismatch(regex, x)
+contains(item) = x -> item ∈ x
+
+include("GitSource.jl")
+
+end
