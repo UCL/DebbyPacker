@@ -7,6 +7,7 @@ ismatch(regex::String) = x -> ismatch(Regex(regex), x)
 ismatch(regex::Regex) = x -> ismatch(regex, x)
 contains(item) = x -> item ∈ x
 
-include("GitSource.jl")
+#= include("GitSource.jl") =#
+include("debianize.jl")
 
 end
