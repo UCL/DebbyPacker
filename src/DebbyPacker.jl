@@ -1,13 +1,13 @@
 module DebbyPacker
 
-export Package, GitSource, TarSource, prepare, build, test, ModifySource
+export Package, GitSource, TarSource, prepare, build, test, ModifySource, Publisher, publish
 
 abstract AbstractPackage
 abstract AbstractSource
 abstract AbstractDebianizer
 abstract AbstractBuilder
 abstract AbstractTest
-abstract AbstractPublish
+abstract AbstractPublisher
 
 type Package <: AbstractPackage
     name::String
@@ -70,6 +70,7 @@ include("TarSource.jl")
 include("ModifySource.jl")
 include("debianize.jl")
 include("docker.jl")
+include("publish.jl")
 
 # Default debianizer is just a place holder
 function Package(name::String, source::AbstractSource, builder=:CMake;
