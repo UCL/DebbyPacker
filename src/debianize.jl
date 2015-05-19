@@ -95,7 +95,7 @@ type CMakeBuilder <: AbstractBuilder
 end
 function rules(package::AbstractPackage, ::AbstractDebianizer, build::CMakeBuilder; kwargs...)
   specials = String["include /usr/share/cdbs/1/class/cmake.mk"]
-  if length(build.flags) > 0
+  if (!isa(build.flags, Nothing)) && length(build.flags) > 0
     push!(specials, "DEB_CMAKE_EXTRA_FLAGS=$(build.flags)")
   end
   debian_file("rules",

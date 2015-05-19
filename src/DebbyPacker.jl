@@ -1,6 +1,6 @@
 module DebbyPacker
 
-export Package, GitSource, prepare, build, test
+export Package, GitSource, TarSource, prepare, build, test, ModifySource
 
 abstract AbstractPackage
 abstract AbstractSource
@@ -67,6 +67,7 @@ end
 include("convenience.jl")
 include("GitSource.jl")
 include("TarSource.jl")
+include("ModifySource.jl")
 include("debianize.jl")
 include("docker.jl")
 
