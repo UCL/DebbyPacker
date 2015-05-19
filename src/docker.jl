@@ -10,8 +10,12 @@ function container(package::AbstractPackage, base, workdir="workspace")
   end
 
   env = {:LOGNAME => :RSDT, :DEBFULLNAME => package.maintainer, :EMAIL => package.email}
-  image = RudeOil.image(name, base;
-      packages=[package.build_depends; package.depends], env=env, volume="/$name")
+  # all dependencies except those declared in this here package
+  packages = setdiff(
+     [package.build_depends; package.depends],
+     map(x -> x[:package], package.binaries)
+  )
+  image = RudeOil.image(name, base; packages=packages, env=env, volume="/$name")
 
   base |> image |> Container(volume=(build, "/$name"), workdir="/$name/$name")
 end
@@ -54,7 +58,7 @@ function test(func::Function, vm::RudeOil.MachineEnv, package::AbstractPackage, 
   end
   c.interactive = true
   open(RudeOil.command(vm, c), "w", STDOUT) do stream
-    write(stream, func())
+    write(stream, "dpkg -i $(package.name)*.deb\n" * func(name))
   end
 end
 function test(func::Function, machine::RudeOil.Machine, package::AbstractPackage, workdir)

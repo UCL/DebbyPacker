@@ -33,5 +33,3 @@ function prepare_source(package::AbstractPackage, gitter::GitSource, workdir::St
     run(`tar -xvf $tar`)
   end
 end
-
-

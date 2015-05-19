@@ -22,7 +22,7 @@ type Package <: AbstractPackage
     section::String
     priority::String
     distribution::String
-    binaries::Vector{Dict{Symbol, String}}
+    binaries::Vector{Dict{Symbol, Any}}
     changes::Vector
     urgency::String
 
@@ -52,6 +52,9 @@ end
 function control(pack::AbstractPackage; kwargs...)
   control(pack, pack.debianize; kwargs...)
 end
+function install(pack::AbstractPackage; kwargs...)
+  install(pack, pack.debianize; kwargs...)
+end
 function rules(pack::AbstractPackage; kwargs...)
   rules(pack, pack.debianize, pack.build; kwargs...)
 end
@@ -63,16 +66,17 @@ end
 
 include("convenience.jl")
 include("GitSource.jl")
+include("TarSource.jl")
 include("debianize.jl")
 include("docker.jl")
 
 # Default debianizer is just a place holder
 function Package(name::String, source::AbstractSource, builder=:CMake;
-    build_flags=nothing, kwargs...)
+    build_flags=nothing, extra_build=[], kwargs...)
   if builder == :CMake || builder == :cmake
-    buildme = CMakeBuilder(build_flags)
+    buildme = CMakeBuilder(build_flags, extra_build)
   else
-    buildme = MakeBuilder()
+    buildme = MakeBuilder(extra_build)
   end
   Package(name, source, Debianizer(), buildme; kwargs...)
 end

@@ -13,6 +13,13 @@ type Debianizer <: AbstractDebianizer end
 
 # Creates a control file for a source package declaring one or more binary packages
 function control(package::Package, debianize::AbstractDebianizer; kwargs...)
+  function as_string(value, joiner=", ")
+    if isa(value, Array) || isa(value, Tuple)
+      join(value, joiner)
+    else
+      string(value)
+    end
+  end
   # Create list of lines
   args = String[
     "Source: $(package.name)",
@@ -34,22 +41,32 @@ function control(package::Package, debianize::AbstractDebianizer; kwargs...)
     push!(args, "Build-Depends: debhelper (>=9)")
   end
 
-  for binary in package.binaries
-    name = pop!(binary, :package, package.name)
-    desc = pop!(binary, :description, "")
-    arch = pop!(binary, :architecture, "any")
+
+  for binary in deepcopy(package.binaries)
+    name = pop!(binary, :package, package.name) |> as_string
+    desc = pop!(binary, :description, "") |> x -> as_string(x, "\n")
+    arch = pop!(binary, :architecture, "any") |> as_string
     push!(args, "")
     push!(args, "Package: $name")
     push!(args, "Architecture: $arch")
-    for (key, value) in binary
+    for (key, value) in filter((k, v) -> k != :install, binary)
       key = "$(uppercase(string(key)[1]))$(lowercase(string(key)[2:end]))"
-      push!(args, "$key: $value")
+      push!(args, "$key: $(as_string(value))")
     end
     if length(desc) > 0; push!(args, "Description: $desc"); end
   end
 
   # now call function
   debian_file("control", args...)
+end
+
+# Adds installation files
+function install(package::Package, debianize::AbstractDebianizer; kwargs...)
+  for binary in package.binaries
+    if !haskey(binary, :install); continue; end
+    name = get(binary, :package, package.name)
+    debian_file("$name.install", binary[:install]...)
+  end
 end
 
 function change(package::Package, args...)
@@ -104,5 +121,6 @@ function debianize(pack::AbstractPackage, ::AbstractDebianizer, workdir="workspa
     control(pack)
     rules(pack)
     change(pack, pack.changes...)
+    install(pack)
   end
 end

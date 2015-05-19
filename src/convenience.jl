@@ -15,8 +15,8 @@ end
 # Each dictionary specifies a binary package
 function get_binaries(name::String; kwargs...)
   # Transform variable keyword arguments into binary packages
-  current = Dict{Symbol, String}()
-  binaries = Dict{Symbol, String}[]
+  current = Dict{Symbol, Any}()
+  binaries = Dict{Symbol, Any}[]
 
   # Adds to list of packages, making sure a package name is available
   function add_package(current, binaries)
@@ -25,15 +25,9 @@ function get_binaries(name::String; kwargs...)
   end
 
   for (key, value) in kwargs
-    if isa(value, Array) || isa(value, Tuple)
-      value = join(value, if key == :description; "\n" else ", " end)
-    else
-      value = string(value)
-    end
-
     if key == :package && length(current) > 0
       add_package(current, binaries)
-      current = {key => string(value)}
+      current = {key => value}
     else
       current[key] = value
     end
