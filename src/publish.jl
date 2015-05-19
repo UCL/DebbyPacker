@@ -1,6 +1,10 @@
+# Information needed for publishing
 type Publisher <: AbstractPublisher
+  # Launchpad id
   id::String
+  # PPA where to put stuff, from user with id above
   ppa::String
+  # GPG-key on current system registered with ubuntu
   gpgkey::String
 end
 function publish(vm::RudeOil.MachineEnv, publisher::Publisher, package::AbstractPackage,
