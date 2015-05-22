@@ -21,7 +21,7 @@ function publish(vm::RudeOil.MachineEnv, publisher::Publisher, package::Abstract
     write(file, readall(`gpg --export -a $gpgkey`))
   end
 
-  c = container(package, nothing, workdir)
+  c = container(package, workdir)
   c.workdir = "/$name"
   vm |> c |> [
     `gpg --allow-secret-key-import --import secret-$gpgkey.asc`
@@ -30,4 +30,4 @@ function publish(vm::RudeOil.MachineEnv, publisher::Publisher, package::Abstract
     `dput ppa:$(publisher.id)/$(publisher.ppa) $(debname)_source.changes`
   ] |> run
 end
-publish(machine::RudeOil.Machine, args...) = publish(activate(machine), args...)
+publish(machine::RudeOil.AbstractMachine, args...) = publish(activate(machine), args...)

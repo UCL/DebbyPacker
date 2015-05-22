@@ -1,4 +1,5 @@
 module DebbyPacker
+using RudeOil
 
 export Package, GitSource, TarSource, prepare, build, test, ModifySource, Publisher, publish
 
@@ -30,18 +31,26 @@ type Package <: AbstractPackage
     debianize::AbstractDebianizer
     build::AbstractBuilder
 
+    image::RudeOil.AbstractImage
+
     function Package(
             name::String, source::AbstractSource, debianize::AbstractDebianizer,
             build::AbstractBuilder;
             license::String="MIT", version::VersionNumber=v"0.0.0", homepage::String="",
             maintainer::String="", email::String="", build_depends::Vector=String[],
             depends::Vector=String[], section::String="devel", priority::String="optional",
-            distribution::String="unstable", changes::Vector=String[], urgency::String="low",
+            distribution::String="trusty", changes::Vector=String[], urgency::String="low",
             kwargs...)
+      packages = ["dh-make", "build-essential", "devscripts", "cdbs"]
+      base = RudeOil.image("packaging", "ubuntu:14.10", packages=packages)
+      base.base.name = {
+        "precise" => "12.04", "trusty" => "ubuntu:14.04", "utopic" => "ubuntu:14.10",
+        "vivid" => "ubuntu:15.04"
+      }[distribution]
       new(
         name, license, version, homepage, maintainer, email, build_depends, depends,
         section, priority, distribution, get_binaries(name; kwargs...), changes, urgency,
-        source, debianize, build
+        source, debianize, build, base
       )
     end
 end
@@ -69,6 +78,7 @@ include("GitSource.jl")
 include("TarSource.jl")
 include("ModifySource.jl")
 include("debianize.jl")
+include("builders.jl")
 include("docker.jl")
 include("publish.jl")
 
@@ -77,13 +87,15 @@ function Package(name::String, source::AbstractSource, builder=:CMake;
     build_flags=nothing, extra_build=[], kwargs...)
   if builder == :CMake || builder == :cmake
     buildme = CMakeBuilder(build_flags, extra_build)
+  elseif builder == :Python || builder == :python
+    buildme = PythonBuilder(extra_build)
   else
     buildme = MakeBuilder(extra_build)
   end
   Package(name, source, Debianizer(), buildme; kwargs...)
 end
 
-function build(machine::RudeOil.Machine, package::AbstractPackage, workdir="workspace")
+function build(machine::RudeOil.AbstractMachine, package::AbstractPackage, workdir="workspace")
   activate(machine) do vm
     container, cmds = make(package, workdir)
     for cmd in cmds

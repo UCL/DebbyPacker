@@ -1,13 +1,7 @@
-using RudeOil
-
-function container(package::AbstractPackage, base, workdir="workspace")
+function container(package::AbstractPackage, workdir="workspace")
   const name = package_name(package)
+  const image_name = matchall(r"[a-z0-9-_\.]", name) |> join
   const build = builddir(package, workdir)
-
-  if is(base, nothing)
-    base = RudeOil.image("packaging", "ubuntu:14.10",
-        packages=["dh-make", "build-essential", "devscripts", "cdbs"])
-  end
 
   env = {:LOGNAME => :RSDT, :DEBFULLNAME => package.maintainer, :EMAIL => package.email}
   # all dependencies except those declared in this here package
@@ -15,12 +9,12 @@ function container(package::AbstractPackage, base, workdir="workspace")
      [package.build_depends; package.depends],
      map(x -> x[:package], package.binaries)
   )
-  image = RudeOil.image(name, base; packages=packages, env=env, volume="/$name")
+  image = RudeOil.image(image_name; packages=packages, env=env, volume="/$name")
 
-  base |> image |> Container(volume=(build, "/$name"), workdir="/$name/$name")
+  package.image |> image |> Container(volume=(build, "/$name"), workdir="/$name/$name")
 end
 
-function dh_make(package::AbstractPackage; base=nothing, workdir="workspace")
+function dh_make(package::AbstractPackage; workdir="workspace")
   const name = package_name(package)
   const tar = tarfile(package, workdir)
 
@@ -40,18 +34,18 @@ function make(package::AbstractPackage, workdir="workspace"; kwargs...)
   make(package, package.build, workdir; kwargs...)
 end
 function make(package::AbstractPackage, builder::AbstractBuilder, workdir::String;
-    base=nothing, source=true, binaries=true, make=true)
+    source=true, binaries=true, make=true)
   cmds = Cmd[]
-  if make; push!(cmds, dh_make(package, base=base, workdir=workdir)); end
+  if make; push!(cmds, dh_make(package, workdir=workdir)); end
   if binaries; push!(cmds, dh_build(package)); end
   if source; push!(cmds, debuild(package)); end
 
-  container(package, base, workdir), cmds
+  container(package, workdir), cmds
 end
 
 function test(func::Function, vm::RudeOil.MachineEnv, package::AbstractPackage, workdir)
   const name = package_name(package)
-  c = container(package, nothing, workdir)
+  c = container(package, workdir)
   c.workdir = "/$name"
   if isa(c.image, RudeOil.BuildImage)
     vm |> c.image |> run
@@ -61,7 +55,7 @@ function test(func::Function, vm::RudeOil.MachineEnv, package::AbstractPackage, 
     write(stream, "dpkg -i $(package.name)*.deb\n" * func(name))
   end
 end
-function test(func::Function, machine::RudeOil.Machine, package::AbstractPackage, workdir)
+function test(func::Function, machine::RudeOil.AbstractMachine, package::AbstractPackage, workdir)
   vm = activate(machine)
   test(func, vm, package, workdir)
 end

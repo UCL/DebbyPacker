@@ -84,35 +84,6 @@ function change(package::Package, args...)
   )
 end
 
-type MakeBuilder <: AbstractBuilder
-  args
-  MakeBuilder(args=[]) = new(args)
-end
-type CMakeBuilder <: AbstractBuilder
-  flags
-  args
-  CMakeBuilder(flags="", args=[]) = new(flags, args)
-end
-function rules(package::AbstractPackage, ::AbstractDebianizer, build::CMakeBuilder; kwargs...)
-  specials = String["include /usr/share/cdbs/1/class/cmake.mk"]
-  if (!isa(build.flags, Nothing)) && length(build.flags) > 0
-    push!(specials, "DEB_CMAKE_EXTRA_FLAGS=$(build.flags)")
-  end
-  debian_file("rules",
-    "#! /usr/bin/make -f",
-    "include /usr/share/cdbs/1/rules/debhelper.mk",
-    specials..., build.args...
-  )
-end
-function rules(package::AbstractPackage,::AbstractDebianizer, build::MakeBuilder; kwargs...)
-  debian_file("rules",
-    "#! /usr/bin/make -f",
-    "include /usr/share/cdbs/1/rules/debhelper.mk",
-    "include /usr/share/cdbs/1/class/makefile.mk",
-    build.args...
-  )
-end
-
 # Adds the different debian files
 function debianize(pack::AbstractPackage, ::AbstractDebianizer, workdir="workspace"; kwargs...)
   const name = package_name(pack)
