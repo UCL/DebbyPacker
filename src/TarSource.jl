@@ -1,4 +1,4 @@
-type TarSource <: DebbyPacker.AbstractSource
+type TarSource <: AbstractSource
   filename::String
   url::String
 end
@@ -6,19 +6,35 @@ TarSource(url::String) = TarSource(basename(url), dirname(url))
 
 # Downloads a tarfile and untars it
 # It expects archive should contain a single directory
-function prepare_source(
-    package::DebbyPacker.AbstractPackage, source::TarSource, workdir::String; kwargs...)
-  const build = DebbyPacker.builddir(package, workdir)
-  const tar = DebbyPacker.tarfile(package, workdir)
-  const name = DebbyPacker.package_name(package)
+function download(package::AbstractPackage, source::TarSource, workdir::String; kwargs...)
+  const src = sourcedir(package, workdir)
+  const presource = dirname(src)
+  const tar = joinpath(presource, source.filename)
 
-  mkpath(build)
-  isfile(tar) || download(source.url * "/" * source.filename, joinpath(build, tar))
-  cd(build) do
-    if !isdir(name)
-      dirname = split(readchomp(`tar -tf $tar`), "\n")[1]
+  mkpath(presource)
+  isfile(tar) || download(source.url * "/" * source.filename, tar)
+  cd(presource) do
+    if !isdir(src)
+      dir = split(readchomp(`tar -tf $tar`), "\n")[1]
       run(`tar -xvf $tar`)
-      mv(dirname, name)
+      mv(dir, basename(src))
     end
   end
+end
+
+type FileSource <: AbstractSource
+  filename::String
+  url::String
+end
+
+FileSource(url::String) = FileSource(basename(url), dirname(url))
+
+# Downloads a tarfile and untars it
+# It expects archive should contain a single directory
+function download(package::AbstractPackage, source::FileSource, workdir::String; kwargs...)
+  const src = sourcedir(package, workdir)
+  const tar = joinpath(src, source.filename)
+
+  mkpath(src)
+  isfile(tar) || download(source.url * "/" * source.filename, tar)
 end

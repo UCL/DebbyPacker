@@ -9,7 +9,8 @@ function packagedir(package::Package, workdir::String)
 end
 # Creates standard tar-file name
 function tarfile(package::Package, workdir::String)
-  joinpath(builddir(package, workdir), "$(package.name)_$(package.version).orig.tar.gz")
+  const version = VersionNumber(package.version.major, package.version.minor, package.version.patch)
+  joinpath(builddir(package, workdir), "$(package.name)_$(version).orig.tar.gz")
 end
 function sourcedir(package::Package, workdir::String)
   joinpath(builddir(package, workdir), "source", package_name(package))

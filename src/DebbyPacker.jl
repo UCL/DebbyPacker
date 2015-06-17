@@ -1,7 +1,9 @@
 module DebbyPacker
 using RudeOil
 
-export Package, GitSource, TarSource, prepare, build, test, ModifySource, Publisher, publish
+export Package, prepare, build, test, Publisher, publish
+export GitSource, TarSource, SourceList, ModifySource, FileSource
+import Base: download
 
 abstract AbstractPackage
 abstract AbstractSource
@@ -19,7 +21,6 @@ type Package <: AbstractPackage
     maintainer::String
     email::String
     build_depends::Vector
-    depends::Vector
     section::String
     priority::String
     distribution::String
@@ -38,7 +39,7 @@ type Package <: AbstractPackage
             build::AbstractBuilder;
             license::String="MIT", version::VersionNumber=v"0.0.0", homepage::String="",
             maintainer::String="", email::String="", build_depends::Vector=String[],
-            depends::Vector=String[], section::String="devel", priority::String="optional",
+            section::String="devel", priority::String="optional",
             distribution::String="trusty", changes::Vector=String[], urgency::String="low",
             kwargs...)
       packages = ["dh-make", "build-essential", "devscripts", "cdbs"]
@@ -48,16 +49,35 @@ type Package <: AbstractPackage
         "vivid" => "ubuntu:15.04"
       }[distribution]
       new(
-        name, license, version, homepage, maintainer, email, build_depends, depends,
+        name, license, version, homepage, maintainer, email, build_depends,
         section, priority, distribution, get_binaries(name; kwargs...), changes, urgency,
         source, debianize, build, base
       )
     end
 end
 
-function prepare_source(pack::AbstractPackage, workdir::String="workspace"; kwargs...)
-  prepare_source(pack, pack.source, workdir; kwargs...)
+function prepare_source(pack::AbstractPackage, workdir::String="workspace";
+    from_scratch=false, kwargs...)
+  if from_scratch && isdir(build)
+    rm(build; recursive=true)
+  end
+  download(pack, pack.source, workdir; kwargs...)
+  tar(pack, pack.source, workdir; kwargs...)
 end
+
+function tar(package::AbstractPackage, ::AbstractSource, workdir::String; kwargs...)
+  const name = package_name(package)
+  const build = builddir(package, workdir)
+  const source = sourcedir(package, workdir)
+  const tar = tarfile(package, workdir)
+  cd(dirname(source)) do
+    run(`tar -czvf $tar --exclude .git* $name`)
+  end
+  cd(build) do
+    run(`tar -xvf $tar`)
+  end
+end
+
 function control(pack::AbstractPackage; kwargs...)
   control(pack, pack.debianize; kwargs...)
 end
@@ -77,6 +97,7 @@ include("convenience.jl")
 include("GitSource.jl")
 include("TarSource.jl")
 include("ModifySource.jl")
+include("SourceList.jl")
 include("debianize.jl")
 include("builders.jl")
 include("docker.jl")
@@ -95,9 +116,10 @@ function Package(name::String, source::AbstractSource, builder=:CMake;
   Package(name, source, Debianizer(), buildme; kwargs...)
 end
 
-function build(machine::RudeOil.AbstractMachine, package::AbstractPackage, workdir="workspace")
+function build(machine::RudeOil.AbstractMachine, package::AbstractPackage, workdir="workspace";
+    kwargs...)
   activate(machine) do vm
-    container, cmds = make(package, workdir)
+    container, cmds = make(package, workdir; kwargs...)
     for cmd in cmds
       vm |> container |> cmd |> run
     end

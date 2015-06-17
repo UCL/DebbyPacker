@@ -34,7 +34,7 @@ function control(package::Package, debianize::AbstractDebianizer; kwargs...)
   push!(args, "Standards-Version: 3.9.5")
   if length(package.homepage) > 0; push!(args, "Homepage: $(package.homepage)"); end
 
-  build_depends = join(package.build_depends, ", ")
+  build_depends = join(all_packages(package), ", ")
   if length(build_depends) > 0
     push!(args, "Build-Depends: debhelper (>=9), $build_depends")
   else
