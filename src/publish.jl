@@ -27,7 +27,7 @@ function publish(vm::RudeOil.MachineEnv, publisher::Publisher, package::Abstract
     `gpg --allow-secret-key-import --import secret-$gpgkey.asc`
     `gpg --import $gpgkey.asc`
     `debsign --re-sign $(debname)_source.changes -k $gpgkey`
-    `dput ppa:$(publisher.id)/$(publisher.ppa) $(debname)_source.changes`
+    `dput -f ppa:$(publisher.id)/$(publisher.ppa) $(debname)_source.changes`
   ] |> run
 end
 publish(machine::RudeOil.AbstractMachine, args...) = publish(activate(machine), args...)
